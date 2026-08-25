@@ -1,0 +1,4 @@
+downloads/
+corepack/
+node-v*/
+.node-extract.*/
