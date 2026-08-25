@@ -37,7 +37,12 @@ COREPACK_HOME="$(malleable_ebook_native_path \
   "$_malleable_ebook_host_os" "$_malleable_ebook_corepack_home")"
 export COREPACK_HOME
 
-_malleable_ebook_active_node_version="$(node --version 2>/dev/null)" || {
+_malleable_ebook_node_executable="$(type -P node 2>/dev/null)" || {
+  printf 'Could not locate the project-managed Node.js executable on PATH.\n' >&2
+  return 1
+}
+
+_malleable_ebook_active_node_version="$("$_malleable_ebook_node_executable" --version 2>/dev/null)" || {
   printf 'Failed to run the project-managed Node.js executable.\n' >&2
   return 1
 }
@@ -48,7 +53,12 @@ if [[ "$_malleable_ebook_active_node_version" != "$MALLEABLE_EBOOK_NODE_VERSION"
   return 1
 fi
 
-_malleable_ebook_active_pnpm_version="$(pnpm --version 2>/dev/null)" || {
+_malleable_ebook_pnpm_executable="$(type -P pnpm 2>/dev/null)" || {
+  printf 'pnpm is not on PATH. Run: %q\n' "$_malleable_ebook_prog_langs_dir/GET-NODEJS.sh" >&2
+  return 1
+}
+
+_malleable_ebook_active_pnpm_version="$("$_malleable_ebook_pnpm_executable" --version 2>/dev/null)" || {
   printf 'pnpm is not ready. Run: %q\n' "$_malleable_ebook_prog_langs_dir/GET-NODEJS.sh" >&2
   return 1
 }
@@ -69,6 +79,8 @@ unset _malleable_ebook_host_arch
 unset _malleable_ebook_node_platform
 unset _malleable_ebook_node_distribution
 unset _malleable_ebook_node_bin_dir
+unset _malleable_ebook_node_executable
+unset _malleable_ebook_pnpm_executable
 unset _malleable_ebook_corepack_home
 unset _malleable_ebook_active_node_version
 unset _malleable_ebook_active_pnpm_version
