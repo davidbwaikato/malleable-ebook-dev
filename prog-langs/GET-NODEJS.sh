@@ -82,6 +82,39 @@ extract_archive() {
   fi
 }
 
+move_extracted_distribution() {
+  local host_os="$1"
+  local source_dir="$2"
+  local destination_dir="$3"
+  local delay
+
+  if [[ "$host_os" != "windows" ]]; then
+    mv -- "$source_dir" "$destination_dir"
+    return
+  fi
+
+  # Windows security and compatibility scanners can briefly retain handles to
+  # newly extracted executables, causing an otherwise valid directory rename
+  # to fail with "Permission denied". Retry for a short, bounded period rather
+  # than using sync, which flushes writes but does not release file handles.
+  if mv -- "$source_dir" "$destination_dir" 2>/dev/null; then
+    return
+  fi
+
+  for delay in 0.25 0.5 1 2 4; do
+    printf 'Windows has temporarily locked the extracted Node.js directory; retrying in %s seconds...\n' \
+      "$delay"
+    sleep "$delay"
+
+    if mv -- "$source_dir" "$destination_dir" 2>/dev/null; then
+      return
+    fi
+  done
+
+  printf 'Unable to install Node.js after waiting for Windows to release the extracted files.\n' >&2
+  mv -- "$source_dir" "$destination_dir"
+}
+
 host_os="$(malleable_ebook_host_os)"
 host_arch="$(malleable_ebook_host_arch)"
 node_platform="$(malleable_ebook_node_platform "$host_os")"
@@ -124,7 +157,7 @@ if [[ ! -d "$install_dir" ]]; then
   extract_archive "$host_os" "$archive_path" "$extract_dir"
   extracted_distribution="$extract_dir/$node_distribution"
   [[ -d "$extracted_distribution" ]] || fail "The Node.js archive had an unexpected directory layout."
-  mv -- "$extracted_distribution" "$install_dir"
+  move_extracted_distribution "$host_os" "$extracted_distribution" "$install_dir"
 
   cleanup_extract_dir
   trap - EXIT
